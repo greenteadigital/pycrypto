@@ -28,13 +28,6 @@ PWD_HASH_MULT = 20
 # # Global variable, may change when decrypting file encrypted with other than selected algo.
 sha2 = ALGOS[SELECTED_ALGO]
 
-def genSalt():
-	salt = ''
-	while len(salt) < DIGESTSZ:
-		salt += os.urandom(1)
-
-	return salt
-
 def bitPack(algonum, EXP_INCR):
 	bitstr = bin(algonum)[2:].zfill(4) + bin(EXP_INCR)[2:].zfill(4)
 
@@ -86,7 +79,7 @@ def main():
 
 	if action == 'e':
 		iter_count = 2 ** (16 + EXP_INCR)
-		salt = genSalt()
+		salt = os.urandom(DIGESTSZ)
 		password = getpass.getpass()
 		hdr = MAGIC + struct.pack('<B', bitPack(SELECTED_ALGO, EXP_INCR))
 		hdr += salt
