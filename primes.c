@@ -42,7 +42,7 @@ unsigned int tryPrime(void *bitsize) {
 		if (mpz_probab_prime_p(randnum, 17)) break;
 	}
 
-	mutex = CreateMutex(NULL, 1, NULL);
+	WaitForSingleObject(mutex, INFINITE);
 	returnedPrime = malloc(PRIME_SZ / 8);
 	mpz_export(returnedPrime, NULL, -1, 2, 0, 0, randnum);
 
@@ -52,16 +52,18 @@ unsigned int tryPrime(void *bitsize) {
 	mpz_clear(seed);
 	mpz_clear(randnum);
 
+	ReleaseMutex(mutex);
 	return 0;
 }
 
-__declspec(dllexport) void *getPrime(short bitlen) {
+__declspec(dllexport) void *getPrime(unsigned short bitlen) {
 
-	void *threads[NTHREADS];
 	void *bitsize = malloc(sizeof(bitlen));
 	if (!bitsize) puts("malloc failed");
 	memcpy(bitsize, &bitlen, sizeof(bitlen));
+	mutex = CreateMutex(NULL, 0, NULL);
 
+	void *threads[NTHREADS];
 	for (int i = 0; i != NTHREADS; i++) {
 		threads[i] = CreateThread(NULL, 0, &tryPrime, bitsize, 0, NULL);
 	}
@@ -69,13 +71,14 @@ __declspec(dllexport) void *getPrime(short bitlen) {
 	for (int i = 0; i != NTHREADS; i++) {
 		TerminateThread(threads[i], 0);
 	}
-	ReleaseMutex(mutex);
+
 	CloseHandle(mutex);
 	//printf("\nprime pointer points to address %p\n", returnedPrime);
 	return returnedPrime;
 }
 
 int main(int argc, char *argv[]) {
+	if (argc < 2) return 1;
 	getPrime(atoi(argv[1]));
 	return 0;
 }
