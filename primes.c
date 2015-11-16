@@ -1,50 +1,50 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <gmp.h>
 #include <windows.h>
-#include <wincrypt.h>
-#include <string.h>
 
 HCRYPTPROV hProvider;
-const int SEED_SZ = 16;	// 128 bits
 const int NTHREADS = 4;
-void *returnedPrime = NULL;
-void *mutex = NULL;
+void *returnedPrime;
+void *mutex;
 
 void getRandom(unsigned char *buffer, long numbytes) {
-  if (!hProvider) {
+	while (!hProvider) {
 	  CryptAcquireContext(&hProvider, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
-  }
-  if (!CryptGenRandom(hProvider, numbytes, buffer)) {
-	  puts("CryptGenRandom failed.");
-	  ExitProcess((UINT)-1);
-  }
+	}
+	int cryptGenSuccess = 0;
+	while (!cryptGenSuccess) {
+	  cryptGenSuccess = CryptGenRandom(hProvider, numbytes, buffer);
+	}
 }
 
 unsigned int tryPrime(void *bitsize) {
 
+	const int SEED_SZ_BYTES = 16;	// 128 bits
+	const int WORD_SZ_BYTES = __WORDSIZE / 8;
+
 	short PRIME_SZ = *((short*)bitsize);
-	unsigned char seed_buff[16];
-	unsigned char *seed_buff_p = (void*) seed_buff;
+	unsigned char seed_buff[SEED_SZ_BYTES];
+	unsigned char *seed_buff_p = &seed_buff[0];
 
 	gmp_randstate_t state;
-	mpz_t seed, randnum;
-
 	gmp_randinit_mt(state);
+
+	mpz_t seed, randnum;
 	mpz_init(seed);
 	mpz_init(randnum);
 
+	getRandom(seed_buff_p, SEED_SZ_BYTES);
+	mpz_import(seed, (SEED_SZ_BYTES/WORD_SZ_BYTES), -1, WORD_SZ_BYTES, 0, 0, seed_buff_p);
+	gmp_randseed(state, seed);
+
 	while(1) {
-		getRandom(seed_buff_p, SEED_SZ);
-		mpz_import(seed, SEED_SZ, 1, 1, 0, 0, seed_buff_p);
-		gmp_randseed(state, seed);
 		mpz_urandomb(randnum, state, PRIME_SZ);
 		if (mpz_probab_prime_p(randnum, 17)) break;
 	}
 
 	WaitForSingleObject(mutex, INFINITE);
-	returnedPrime = malloc(PRIME_SZ / 8);
-	mpz_export(returnedPrime, NULL, -1, 2, 0, 0, randnum);
+	returnedPrime = malloc((PRIME_SZ / 8));
+	mpz_export(returnedPrime, NULL, -1, WORD_SZ_BYTES, 0, 0, randnum);
 
 	gmp_printf("%Zd\n\n", randnum);
 
@@ -52,16 +52,15 @@ unsigned int tryPrime(void *bitsize) {
 	mpz_clear(seed);
 	mpz_clear(randnum);
 
-	ReleaseMutex(mutex);
 	return 0;
 }
 
-__declspec(dllexport) void *getPrime(unsigned short bitlen) {
+void *getPrime(unsigned short bitlen) {
 
 	void *bitsize = malloc(sizeof(bitlen));
 	if (!bitsize) puts("malloc failed");
 	memcpy(bitsize, &bitlen, sizeof(bitlen));
-	mutex = CreateMutex(NULL, 0, NULL);
+	mutex = CreateMutex(NULL, FALSE, NULL);
 
 	void *threads[NTHREADS];
 	for (int i = 0; i != NTHREADS; i++) {
