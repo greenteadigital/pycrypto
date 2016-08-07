@@ -1,5 +1,6 @@
 
-def isSpsp(testing, known_prime):
+def isPrime(testing):
+	def isSpsp(testing, known_prime):
 		d = testing - 1
 		s = 0
 		while d % 2 == 0:
@@ -14,8 +15,6 @@ def isSpsp(testing, known_prime):
 			t = (t * t) % testing
 			s = s - 1
 		return False
-
-def isPrime(testing):
 	known_primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41,
 		 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
 	if testing in known_primes:

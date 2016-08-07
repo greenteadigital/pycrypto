@@ -85,7 +85,7 @@ def main():
 		hdr += salt
 
 		hashed_pwd = sha2(salt + password).digest()
-		for _ in xrange(iter_count * PWD_HASH_MULT):
+		for unused in xrange(iter_count * PWD_HASH_MULT):
 			hashed_pwd = sha2(salt + hashed_pwd).digest()
 		hdr += hashed_pwd
 
@@ -104,14 +104,14 @@ def main():
 
 		password = getpass.getpass()
 		hashed_pwd = sha2(salt + password).digest()
-		for _ in xrange(iter_count * PWD_HASH_MULT):
+		for unused in xrange(iter_count * PWD_HASH_MULT):
 			hashed_pwd = sha2(salt + hashed_pwd).digest()
 		assert(constTimeCompare(embedded_hash, hashed_pwd))
 
 	# # Key stretching
 	sys.stdout.write("\nDeriving key...")
 	keyblock = genKeyBlock(password, salt)
-	for _ in xrange(iter_count):
+	for unused in xrange(iter_count):
 		keyblock = genKeyBlock(keyblock, salt)
 	print "done."
 	
