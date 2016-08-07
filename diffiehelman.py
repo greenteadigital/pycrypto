@@ -7,65 +7,67 @@ import time
 
 if __name__ == '__main__':
 
-	BITS = 1024*2
+	BITS = int(1024 * 1.0)
+	POOL_SZ = multi.cpu_count()
+	
 	SHARED_BASE = 2
-	
 	SHARED_PRIME = 0
+	
+	ALICE_SHARED_COMPUTED = 0
 	ALICE_SECRET = 0
+	
+	BOB_SHARED_COMPUTED = 0
 	BOB_SECRET = 0
-	A = 0
-	B = 0
-	pool = multi.Pool(3)
 	
-	def sp(p):
-		global SHARED_PRIME
-		SHARED_PRIME = p
-		print('callback set SHARED_PRIME')
-# 		if not ALICE_SECRET:
-# 			ALICE_SECRET = pool.apply_async(getPrime, (BITS,)).get()
+	pool = multi.Pool(POOL_SZ)
 	
-	def sa(p):
-		global ALICE_SECRET
-		ALICE_SECRET = p
-		print('callback set ALICE_SECRET')
-# 		if not BOB_SECRET:
-# 			BOB_SECRET = pool.apply_async(getPrime, (BITS,)).get()
-	
-	def sb(p):
-		global BOB_SECRET
-		BOB_SECRET = p
-		print('callback set BOB_SECRET')
-# 		if not SHARED_PRIME:
-# 			SHARED_PRIME = pool.apply_async(getPrime, (BITS,)).get()
+	def setPrime(p):
+		global pool, SHARED_PRIME, ALICE_SECRET, BOB_SECRET
 		
+		if not SHARED_PRIME:
+			SHARED_PRIME = p
+			pool.apply_async(getPrime, (BITS,), callback=setPrime)
+			print('callback set SHARED_PRIME')
+			return
+		elif not ALICE_SECRET:
+			ALICE_SECRET = p
+			pool.apply_async(getPrime, (BITS,), callback=setPrime)
+			print('callback set ALICE_SECRET')
+			return
+		elif not BOB_SECRET:
+			BOB_SECRET = p
+			print('callback set BOB_SECRET')
+			pool.terminate()
+
+		
+	for _ in xrange(POOL_SZ):
+		pool.apply_async(getPrime, (BITS,), callback=setPrime)
 	
-	pool.apply_async(getPrime, (BITS,), callback=sp)
-	pool.apply_async(getPrime, (BITS,), callback=sa)
-	pool.apply_async(getPrime, (BITS,), callback=sb)
 	
 	while 1:
 		if SHARED_PRIME:
-			if BOB_SECRET:
-				B = pow(SHARED_BASE, BOB_SECRET, SHARED_PRIME)
-			if ALICE_SECRET:
-				A = pow(SHARED_BASE, ALICE_SECRET, SHARED_PRIME)
-			if A and B:
+			
+			if BOB_SECRET and not BOB_SHARED_COMPUTED:
+				BOB_SHARED_COMPUTED = pow(SHARED_BASE, BOB_SECRET, SHARED_PRIME)
+			
+			if ALICE_SECRET and not ALICE_SHARED_COMPUTED:
+				ALICE_SHARED_COMPUTED = pow(SHARED_BASE, ALICE_SECRET, SHARED_PRIME)
+			
+			if ALICE_SHARED_COMPUTED and BOB_SHARED_COMPUTED:
 				break
 		time.sleep(0.1)
 		
-	# Begin
-	print( "Publicly Shared Variables:")
+	print( "\nPublicly Shared Variables:")
 	print( "\tShared Base:  ", SHARED_BASE )
 	print( "\tShared Prime: " , SHARED_PRIME )
 
-	print( "\n---------------------------------" )
-	print( "Privately Calculated Shared Secret:" )
-	# Alice Computes Shared Secret: s = B^a mod p
-	aliceSharedSecret = pow(B, ALICE_SECRET, SHARED_PRIME)
+	print( "\n---------------------------------------------" )
+	print( "Privately Calculated Shared Secret (%d bits):" % BITS )
+	
+	aliceSharedSecret = pow(BOB_SHARED_COMPUTED, ALICE_SECRET, SHARED_PRIME)
 	print("\tAlice: ", aliceSharedSecret )
 	
-	# Bob Computes Shared Secret: s = A^b mod p
-	bobSharedSecret = pow(A, BOB_SECRET, SHARED_PRIME)
+	bobSharedSecret = pow(ALICE_SHARED_COMPUTED, BOB_SECRET, SHARED_PRIME)
 	print("\tBob:   ", bobSharedSecret )
 	
 	assert bobSharedSecret == aliceSharedSecret
