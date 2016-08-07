@@ -1,14 +1,20 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <gmp.h>
+#include <windows.h>
 
-const int NTHREADS = 8;
+HCRYPTPROV hProvider;
+const int NTHREADS = 4;
 void *returnedPrime;
 void *mutex;
 
 void getRandom(unsigned char *buffer, long numbytes) {
-	
+	while (!hProvider) {
+	  CryptAcquireContext(&hProvider, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT);
+	}
+	int cryptGenSuccess = 0;
+	while (!cryptGenSuccess) {
+	  cryptGenSuccess = CryptGenRandom(hProvider, numbytes, buffer);
+	}
 }
 
 unsigned int tryPrime(void *bitsize) {
@@ -36,7 +42,7 @@ unsigned int tryPrime(void *bitsize) {
 		if (mpz_probab_prime_p(randnum, 17)) break;
 	}
 
-	//WaitForSingleObject(mutex, INFINITE);
+	WaitForSingleObject(mutex, INFINITE);
 	returnedPrime = malloc((PRIME_SZ / 8));
 	mpz_export(returnedPrime, NULL, -1, WORD_SZ_BYTES, 0, 0, randnum);
 
@@ -54,18 +60,18 @@ void *getPrime(unsigned short bitlen) {
 	void *bitsize = malloc(sizeof(bitlen));
 	if (!bitsize) puts("malloc failed");
 	memcpy(bitsize, &bitlen, sizeof(bitlen));
-	//mutex = CreateMutex(NULL, FALSE, NULL);
+	mutex = CreateMutex(NULL, FALSE, NULL);
 
 	void *threads[NTHREADS];
 	for (int i = 0; i != NTHREADS; i++) {
-		//threads[i] = CreateThread(NULL, 0, &tryPrime, bitsize, 0, NULL);
+		threads[i] = CreateThread(NULL, 0, &tryPrime, bitsize, 0, NULL);
 	}
-	//WaitForMultipleObjects(NTHREADS, threads, FALSE, INFINITE);
+	WaitForMultipleObjects(NTHREADS, threads, FALSE, INFINITE);
 	for (int i = 0; i != NTHREADS; i++) {
-		//TerminateThread(threads[i], 0);
+		TerminateThread(threads[i], 0);
 	}
 
-	//CloseHandle(mutex);
+	CloseHandle(mutex);
 	//printf("\nprime pointer points to address %p\n", returnedPrime);
 	return returnedPrime;
 }
