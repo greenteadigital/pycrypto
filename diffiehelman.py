@@ -1,13 +1,14 @@
 # use Python 3 print function
 # this allows this code to run on python 2.x and 3.x
 from __future__ import print_function
-from primes import getPrime
+from primes import CgetPrime
 import multiprocessing as multi
 import time
+import os
 
 if __name__ == '__main__':
 
-	BITS = int(1024 * 1.0)
+	BITS = '2048'
 	POOL_SZ = multi.cpu_count()
 	
 	SHARED_BASE = 2
@@ -26,22 +27,23 @@ if __name__ == '__main__':
 		
 		if not SHARED_PRIME:
 			SHARED_PRIME = p
-			pool.apply_async(getPrime, (BITS,), callback=setPrime)
+# 			pool.apply_async(CgetPrime, (BITS,), callback=setPrime)
 			print('callback set SHARED_PRIME')
 			return
 		elif not ALICE_SECRET:
 			ALICE_SECRET = p
-			pool.apply_async(getPrime, (BITS,), callback=setPrime)
+# 			pool.apply_async(CgetPrime, (BITS,), callback=setPrime)
 			print('callback set ALICE_SECRET')
 			return
 		elif not BOB_SECRET:
 			BOB_SECRET = p
 			print('callback set BOB_SECRET')
+			os.system("killall primes")
 			pool.terminate()
 
 		
 	for _ in xrange(POOL_SZ):
-		pool.apply_async(getPrime, (BITS,), callback=setPrime)
+		pool.apply_async(CgetPrime, (BITS,), callback=setPrime)
 	
 	
 	while 1:
@@ -62,7 +64,7 @@ if __name__ == '__main__':
 	print( "\tShared Prime: " , SHARED_PRIME )
 
 	print( "\n---------------------------------------------" )
-	print( "Privately Calculated Shared Secret (%d bits):" % BITS )
+	print( "Privately Calculated Shared Secret (%s bits):" % BITS )
 	
 	aliceSharedSecret = pow(BOB_SHARED_COMPUTED, ALICE_SECRET, SHARED_PRIME)
 	print("\tAlice: ", aliceSharedSecret )
