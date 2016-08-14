@@ -5,11 +5,11 @@
 #include <pthread.h>
 #include <sph_md5.h>
 #include <unistd.h>
+#include <stdbool.h>
 
-int NTHREADS = 4;
-
+int nthreads = 4;
 unsigned char rand_base[16];
-unsigned char hash_random = 1;
+bool hash_random = true;
 
 pthread_mutex_t printlock;
 pthread_mutex_t randbase_lock;
@@ -22,8 +22,8 @@ void md5(sph_md5_context *ctxt_ptr, unsigned char *inbuff, const char inbuffsz, 
 
 void getRandomHash(unsigned char *buffer, const char numbytes, sph_md5_context *ctxt) {
 	
-	md5(ctxt, &rand_base[0], numbytes, buffer);
 	pthread_mutex_lock(&randbase_lock);
+	md5(ctxt, &rand_base[0], numbytes, buffer);
 	memcpy(rand_base, buffer, numbytes);
 	pthread_mutex_unlock(&randbase_lock);
 }
@@ -37,9 +37,9 @@ void getUrandom(unsigned char *buff, unsigned char buffsz) {
 	}
 }
 
-void tryPrime(void *bitsize) {
+void getPrime(void *bitsize) {
 	
-	const char SEED_SZ_BYTES = 16;	// 128 bits for random seed
+	const char SEED_SZ_BYTES = 16;	// 128 bit random seed
 	
 	short PRIME_SZ = *((short*)bitsize);
 	unsigned char seed_buff[SEED_SZ_BYTES];
@@ -62,7 +62,7 @@ void tryPrime(void *bitsize) {
 	if (hash_random) {
 		getRandomHash(seed_buff_p, SEED_SZ_BYTES, &ctxt);
 	} else {
-		getUrandom(seed_buff_p, sizeof(rand_base));
+		getUrandom(seed_buff_p, SEED_SZ_BYTES);
 	}
 	
 	mpz_import(seed, SEED_SZ_BYTES, -1, 1, 0, 0, seed_buff_p);
@@ -79,17 +79,19 @@ void tryPrime(void *bitsize) {
 	exit(0);
 }
 
-void getPrime(unsigned short bitlen) {
+void initThreads(unsigned short bitlen) {
 	
 	pthread_mutex_init(&printlock, NULL);
 	pthread_mutex_init(&randbase_lock, NULL);
-	pthread_t threads[NTHREADS];
+	pthread_t threads[nthreads];
 	
-	getUrandom(&rand_base[0], sizeof(rand_base));
+	if (hash_random) {	//initialize rand_base
+		getUrandom(&rand_base[0], sizeof(rand_base));
+	}
 	
-	for (int i = 0; i != NTHREADS; i++) {
+	for (int i = 0; i != nthreads; i++) {
 		pthread_t new_thread;
-		pthread_create(&new_thread, NULL, (void *) &tryPrime, (void *) &bitlen);
+		pthread_create(&new_thread, NULL, (void *) &getPrime, (void *) &bitlen);
 		threads[i] = new_thread;
 	}
 	
@@ -100,33 +102,35 @@ void getPrime(unsigned short bitlen) {
 }
 
 int main(int argc, char *argv[]) {
-	if (argc < 2) return 1;
+	if (argc < 3) return 1;
 	
 	int c;
 	extern char *optarg;
 	extern int optind, optopt, opterr;
 	unsigned short bitlen = 0;
 	
-	while ((c = getopt(argc, argv, "b:t:hu")) != -1) {
+	while ((c = getopt(argc, argv, "b:t:u")) != -1) {
+		
 		switch(c) {
+			
 			case 'b':
 				bitlen = atoi(optarg);
 				break;
+			
 			case 't':
-				NTHREADS = atoi(optarg);
+				nthreads = atoi(optarg);
 				break;
-			case 'h':
-				hash_random = 1;
-				break;
+			
 			case 'u':
-				hash_random = 0;
+				hash_random = false;
 				break;
+			
 			case '?':
 				printf("unknown arg %c\n", optopt);
 				break;
 		}
 	}
 	
-	getPrime(bitlen);
+	initThreads(bitlen);
 	return 0;
 }
