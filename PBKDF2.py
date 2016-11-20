@@ -5,7 +5,9 @@ import struct
 import sys
 
 # # Global constants
-SELECTED_ALGO = 0  # TODO: let user select algo
+SELECTED_ALGO = 3  # TODO: let user select algo
+EXP_INCR = 1; assert(0 <= EXP_INCR <= 4)  # enforce min/max
+
 ALGOS = {
 	0: sha224,
 	1: sha256,
@@ -22,14 +24,13 @@ DIGESTSZ = DIGESTSIZES[SELECTED_ALGO]
 CRYPT_EXT = '.phse'
 MAGIC = "PBKDF2-HMAC-SHA2"
 # TODO: allow user input
-EXP_INCR = 0; assert(0 <= EXP_INCR <= 4)  # enforce min/max
 PWD_HASH_MULT = 20
 
 # # Global variable, may change when decrypting file encrypted with other than selected algo.
 sha2 = ALGOS[SELECTED_ALGO]
 
-def bitPack(algonum, EXP_INCR):
-	bitstr = bin(algonum)[2:].zfill(4) + bin(EXP_INCR)[2:].zfill(4)
+def bitPack(algonum, exp_incr):
+	bitstr = bin(algonum)[2:].zfill(4) + bin(exp_incr)[2:].zfill(4)
 
 	return int('0b' + bitstr, 2)
 
@@ -70,7 +71,7 @@ def getAction(path):
 
 # @profile
 def main():
-	global sha2
+	global sha2, DIGESTSZ
 	_input = open(sys.argv[1], 'rb')
 
 	action = getAction(sys.argv[1])
@@ -99,6 +100,7 @@ def main():
 		algonum, exp_incr = bitUnpack(struct.unpack('<B', _input.read(1))[0])
 		sha2 = ALGOS[algonum]
 		iter_count = 2 ** (16 + exp_incr)
+		DIGESTSZ = DIGESTSIZES[algonum]
 		salt = _input.read(DIGESTSZ)
 		embedded_hash = _input.read(DIGESTSZ)
 
