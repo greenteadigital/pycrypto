@@ -10,4 +10,4 @@ import subprocess
 # 			return n
 
 def CgetPrime(numbits):
-	return int(subprocess.Popen(["/Users/ben/Desktop/primes", numbits], stdout=subprocess.PIPE).communicate()[0])
+	return int(subprocess.Popen(["/Users/ben/Desktop/primes", "-b", numbits], stdout=subprocess.PIPE).communicate()[0])

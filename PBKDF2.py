@@ -129,8 +129,8 @@ def main():
 		if in_bytes:
 			keyblock = genKeyBlock(keyblock, salt)
 			outstr = ''
-			for n in xrange(len(in_bytes)):
-				outstr += (chr(ord(keyblock[n]) ^ ord(in_bytes[n])))
+			for threadnum in xrange(len(in_bytes)):
+				outstr += (chr(ord(keyblock[threadnum]) ^ ord(in_bytes[threadnum])))
 			out.write(outstr)
 		else:
 			out.close()
