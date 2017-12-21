@@ -38,7 +38,7 @@ def bitPack(algonum, exp_incr, compressornum):
 	bitstr = (bin(algonum)[2:].zfill(2)
 			+ bin(exp_incr)[2:].zfill(2)
 			+ bin(compressornum)[2:].zfill(2)
-			+ '00')
+			+ '00')	## two bits left for storing metadata
 	
 	r = int('0b' + bitstr, 2)
 	return r
@@ -81,12 +81,19 @@ def main():
 	if action in ('i', 'd'):
 		_input = open(sys.argv[1], 'rb')
 		## Verify MAGIC
-		assert(_input.read(len(MAGIC)) == MAGIC) 
+		try:
+			assert(_input.read(len(MAGIC)) == MAGIC)
+		except AssertionError:
+			raise AssertionError('File magic number does not match expected value. Aborting operation.') 
 		
 		## Extract key derivation parameters from header
 		algonum, exp_incr, compressornum = bitUnpack(struct.unpack('<B', _input.read(1))[0])
 		_range = xrange(0,4)
-		assert(algonum in _range and exp_incr in _range and compressornum in _range)
+		try:
+			assert(algonum in _range and exp_incr in _range and compressornum in _range)
+		except AssertionError:
+			raise AssertionError('Values unpacked from bitfields are out of range!')
+			
 		sha2 = ALGOS[algonum]
 		iter_count = 2 ** (16 + exp_incr)
 		digestsz = DIGESTSIZES[algonum]
@@ -124,10 +131,12 @@ def main():
 		password = usr.getPassword()
 		hdr = MAGIC + struct.pack('<B', bitPack(algonum, exp_incr, compressornum))
 		hdr += salt
-
+		sys.stdout.write("\nHashing password...")
+		sys.stdout.flush()
 		hashed_pwd = sha2(salt + password).digest()
 		for _ in xrange(iter_count * PWD_HASH_MULT):
 			hashed_pwd = sha2(salt + hashed_pwd).digest()
+		print "done."
 		hdr += hashed_pwd
 
 	elif action == 'd':
@@ -137,12 +146,14 @@ def main():
 		hashed_pwd = sha2(salt + password).digest()
 		for _ in xrange(hashed_password_iters):
 			hashed_pwd = sha2(salt + hashed_pwd).digest()
-		sys.stdout.write("\ndone...")
-		sys.stdout.flush()
-		assert(constTimeCompare(embedded_hash, hashed_pwd))
+		print "done."
+		try:
+			assert(constTimeCompare(embedded_hash, hashed_pwd))
+		except AssertionError:
+			raise AssertionError('Embedded password hash does not match. Operation aborted.')
 
 	# # Key stretching
-	sys.stdout.write("\nDeriving key...")
+	sys.stdout.write("Deriving key...")
 	sys.stdout.flush()
 	keyblock = genKeyBlock(password, salt)
 	for _ in xrange(iter_count):
@@ -182,8 +193,7 @@ def main():
 if __name__ == "__main__" and len(sys.argv) == 2:
 	try:
 		main()
-	except AssertionError as e:
-		print "Critical assertion failed in function main()!"
-		raise e
-	exit()
+	except Exception as e:
+		print str(e)
+	_exit()
 # # EOF
