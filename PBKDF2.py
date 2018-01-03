@@ -23,7 +23,7 @@ DIGESTSIZES = {
 COMPRESSION = {
 	0: None,
 	1: zlib,
-	2: bz2,
+	2: bz2
 }
 CRYPT_EXT = '.phse'
 MAGIC = "PBKDF2-HMAC-SHA2"
@@ -90,7 +90,9 @@ def main():
 		algonum, exp_incr, compressornum = bitUnpack(struct.unpack('<B', _input.read(1))[0])
 		_range = xrange(0,4)
 		try:
-			assert(algonum in _range and exp_incr in _range and compressornum in _range)
+			assert(algonum in _range
+				and exp_incr in _range
+				and compressornum in _range)
 		except AssertionError:
 			raise AssertionError('Values unpacked from bitfields are out of range!')
 			
