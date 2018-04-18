@@ -126,14 +126,17 @@ def main():
 		exp_incr = usr.getExponentIncrement()
 		compressornum = usr.getCompression()
 		compressor = COMPRESSION[compressornum]
-		_input = strio(compressor.compress(_input.read()))
 		iter_count = 2 ** (16 + exp_incr)
 		digestsz = DIGESTSIZES[algonum]
 		salt = os.urandom(digestsz)
 		password = usr.getPassword()
 		hdr = MAGIC + struct.pack('<B', bitPack(algonum, exp_incr, compressornum))
 		hdr += salt
-		sys.stdout.write("\nHashing password...")
+		sys.stdout.write("\nCompressing file...")
+		sys.stdout.flush()
+		_input = strio(compressor.compress(_input.read()))
+		print "done."
+		sys.stdout.write("Hashing password...")
 		sys.stdout.flush()
 		hashed_pwd = sha2(salt + password).digest()
 		for _ in xrange(iter_count * PWD_HASH_MULT):
@@ -184,12 +187,15 @@ def main():
 		else:
 			out.close()
 			break
+	print "done."
 		
 	if action == 'd' and compressor is not None:
+		sys.stdout.write("Decompressing file...")
+		sys.stdout.flush()
 		outplain = compressor.decompress(open(sys.argv[1].replace(CRYPT_EXT, ''), 'rb').read())
+		print "done."
 		open(sys.argv[1].replace(CRYPT_EXT, ''), 'wb').write(outplain)
 		
-	print "done."
 	_exit()
 
 if __name__ == "__main__" and len(sys.argv) == 2:
