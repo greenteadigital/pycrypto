@@ -8,7 +8,7 @@ def getCompression():
     return int(num_selected) - 1
 
 def askCompression():
-    return raw_input('''
+    return input('''
 Select compression:
 
 (1) None
@@ -24,7 +24,7 @@ def getExponentIncrement():
     return int(num_selected) - 1
 
 def askIterations():
-    return raw_input('''
+    return input('''
 Select number of iterations:
 
  #     Key derivation rounds    Password hashing rounds
@@ -43,7 +43,7 @@ def getHashAlgoNum():
     return int(num_selected) - 1
     
 def askHashAlgo():
-    return raw_input('''
+    return input('''
 Select hash algorithm:
 (1) SHA224
 (2) SHA256
@@ -53,10 +53,10 @@ Select hash algorithm:
 Enter 1,2,3 or 4: ''')
 
 def getAction(path):
-    print
-    print path
-    print
-    action = raw_input("(E)ncrypt, (D)ecrypt, or (I)nfo? ").lower()
+    print()
+    print(path)
+    print()
+    action = input("(E)ncrypt, (D)ecrypt, or (I)nfo? ").lower()
     while action not in ('e', 'd', 'i'):
         action = getAction(sys.argv[1])
     return action
@@ -65,7 +65,7 @@ def getPassword():
     password0 = getpass.getpass()
     password1 = getpass.getpass("Re-enter password: ")
     if password0 == password1:
-        return password0
+        return password0.encode()
     else:
-        print "Passwords do not match."
+        print("Passwords do not match.")
         return getPassword()
